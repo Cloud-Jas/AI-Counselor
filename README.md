@@ -64,6 +64,10 @@ The counseling summary is structured into four key elements:
 
   </div>
 
+# Live url:
+
+https://aicounsellorfrontend.victoriousfield-921136ee.centralindia.azurecontainerapps.io/
+
 
 # Screenshots
 
