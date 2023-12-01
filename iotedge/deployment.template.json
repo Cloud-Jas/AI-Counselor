@@ -1,0 +1,115 @@
+{
+  "$schema-template": "4.0.0",
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.1",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "d7a6feac73964dcba70d0a9ab016d8a8": {
+                "username": "$CONTAINER_REGISTRY_USERNAME_d7a6feac73964dcba70d0a9ab016d8a8",
+                "password": "$CONTAINER_REGISTRY_PASSWORD_d7a6feac73964dcba70d0a9ab016d8a8",
+                "address": "d7a6feac73964dcba70d0a9ab016d8a8.azurecr.io"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.4",
+              "createOptions": {}
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.4",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ],
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "faceemotionrecognizer": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.faceemotionrecognizer}",
+              "createOptions": {
+                "Env":[
+                  "AZURE_STORAGE_CONNECTION_STRING=YOUR_AZURE_STORAGE_CONN_STRING",
+                  "AZURE_STORAGE_CONTAINER_NAME=faceemotions"
+                ],
+                "HostConfig":{
+                  "Privileged":true,
+                  "Binds":["/dev/video0:/dev/video0"]
+                }
+              }
+            }
+          },
+          "cameraCapture": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.cameraCapture}",
+              "createOptions": {
+                "Env":[
+                  "AZURE_STORAGE_CONNECTION_STRING=YOUR_AZURE_STORAGE_CONN_STRING",
+                  "AZURE_STORAGE_CONTAINER_NAME=faceemotions"
+                ],
+                "HostConfig":{
+                  "Privileged":true,
+                  "Binds":["/dev/video0:/dev/video0"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.2",
+        "routes": {
+          "faceemotionrecognizerToIoTHub": "FROM /messages/modules/faceemotionrecognizer/outputs/* INTO $upstream",
+          "sensorTofaceemotionrecognizer": "FROM /messages/modules/SimulatedTemperatureSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/faceemotionrecognizer/inputs/input1\")",
+          "cameraCaptureToIoTHub": "FROM /messages/modules/cameraCapture/outputs/* INTO $upstream"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    }
+  }
+}

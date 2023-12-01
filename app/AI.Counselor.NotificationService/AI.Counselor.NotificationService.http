@@ -1,0 +1,6 @@
+@AI.Counselor.NotificationService_HostAddress = http://localhost:5076
+
+GET {{AI.Counselor.NotificationService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

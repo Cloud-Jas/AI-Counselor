@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="css/typography.css" rel="stylesheet">
+    <link href="css/highlight.css" rel="stylesheet">
+    <link rel="icon" href="/img/blazor.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="AICounsellorFrontend.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />   
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">        
+    @BlazorHtml.ImportMap(new()
+    {
+        ["app.mjs"] = ("/mjs/app.mjs", "/mjs/app.mjs"),
+        ["@servicestack/client"] = ("/lib/mjs/servicestack-client.mjs", "/lib/mjs/servicestack-client.min.mjs"),
+    })
+    <HeadOutlet />
+</head>
+
+<body class="bg-white dark:bg-black dark:text-white">
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="js/servicestack-blazor.js"></script>
+    <script>JS.init()</script>
+    <script src="lib/js/highlight.js"></script>        
+    <script>hljs.highlightAll()</script>
+</body>
+
+</html>

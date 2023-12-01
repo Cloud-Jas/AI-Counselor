@@ -1,0 +1,6 @@
+@AI.Counselor.IngestionService_HostAddress = http://localhost:5192
+
+GET {{AI.Counselor.IngestionService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

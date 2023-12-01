@@ -1,0 +1,6 @@
+@AI.Counselor.OpenAIservice_HostAddress = http://localhost:5175
+
+GET {{AI.Counselor.OpenAIservice_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,170 @@
+﻿@page "/emotion-table"
+@using BlazorBootstrap
+@using Newtonsoft.Json
+@rendermode InteractiveServer
+
+
+<h3>Emotion Table</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Emotion</th>
+            <th>Timestamp Start</th>
+            <th>Timestamp End</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var emotion in emotionData.Emotions)
+        {
+            <tr>
+                <td>@emotion.EmotionType</td>
+                <td>@UnixTimeStampToDateTime(@emotion.TimestampRange.Start)</td>
+                <td>@UnixTimeStampToDateTime(@emotion.TimestampRange.End)</td>
+                @if (IsGreaterThan10Seconds(emotion.TimestampRange))
+                {
+                    <td>
+                        <button @onclick="() => ShowReasonModal(emotion)">Reason</button>
+                    </td>
+                }
+                else
+                {
+                    <td></td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="modal" style="display: @(showModal ? "block" : "none")">
+    <div class="modal-content">
+        <span class="close" @onclick="CloseModal">&times;</span>
+        <h4>Reason for @(selectedEmotion != null ? selectedEmotion.EmotionType : "hi")</h4>
+        <textarea @bind="reason" rows="4" cols="50"></textarea>
+        <button @onclick="SubmitReason">Submit</button>
+    </div>
+</div>
+
+@code {
+    private bool showModal = false;
+    private Emotion selectedEmotion;
+    private string reason = string.Empty;
+
+    private EmotionData emotionData = Newtonsoft.Json.JsonConvert.DeserializeObject<EmotionData>(@"
+        {
+            ""total_images"": 36,
+            ""emotions"": [
+                {""emotion"": ""surprise"", ""timestamp_range"": {""start"": 1700757007.540135, ""end"": 1700757009.2087383}},
+                {""emotion"": ""happy"", ""timestamp_range"": {""start"": 1700757010.8996234, ""end"": 1700757010.899626}},
+                {""emotion"": ""fear"", ""timestamp_range"": {""start"": 1700757012.6233485, ""end"": 1700757014.348561}},
+                {""emotion"": ""neutral"", ""timestamp_range"": {""start"": 1700757016.0134804, ""end"": 1700757016.0134828}},
+                {""emotion"": ""happy"", ""timestamp_range"": {""start"": 1700757017.6766317, ""end"": 1700757022.5888004}},
+                {""emotion"": ""fear"", ""timestamp_range"": {""start"": 1700757024.2147014, ""end"": 1700757024.2147033}},
+                {""emotion"": ""neutral"", ""timestamp_range"": {""start"": 1700757025.9648454, ""end"": 1700757025.9648473}},
+                {""emotion"": ""happy"", ""timestamp_range"": {""start"": 1700757027.6120777, ""end"": 1700757039.218781}},
+                {""emotion"": ""fear"", ""timestamp_range"": {""start"": 1700757040.9256592, ""end"": 1700757040.9256618}},
+                {""emotion"": ""happy"", ""timestamp_range"": {""start"": 1700757042.56233, ""end"": 1700757065.7446063}}
+            ]
+        }
+    ");
+
+    private DateTime UnixTimeStampToDateTime(double unixTimestamp)
+    {
+        // The Unix epoch starts from January 1, 1970
+        DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // Convert the Unix timestamp to seconds and add it to the epoch
+        return epoch.AddSeconds(unixTimestamp);
+    }
+
+    private bool IsGreaterThan10Seconds(TimestampRange timestampRange)
+    {
+        var duration = TimeSpan.FromSeconds(timestampRange.End - timestampRange.Start);
+        return duration.TotalSeconds > 10;
+    }
+
+    private bool IsGreaterThan5Minutes(TimestampRange timestampRange)
+    {
+        var duration = TimeSpan.FromSeconds(timestampRange.End - timestampRange.Start);
+        return duration.TotalMinutes > 5;
+    }
+
+    private void ShowReasonModal(Emotion emotion)
+    {
+        selectedEmotion = emotion;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private void SubmitReason()
+    {
+        // Implement your logic to handle the submitted reason
+        // For example, you can print it to the console
+        Console.WriteLine($"Reason for {selectedEmotion.EmotionType}: {reason}");
+
+        // Close the modal
+        showModal = false;
+    }
+
+    class EmotionData
+    {
+        [JsonProperty("total_images")]
+        public int TotalImages { get; set; }
+
+        [JsonProperty("emotions")]
+        public List<Emotion> Emotions { get; set; }
+    }
+
+    class Emotion
+    {
+        [JsonProperty("emotion")]
+        public string EmotionType { get; set; }
+
+        [JsonProperty("timestamp_range")]
+        public TimestampRange TimestampRange { get; set; }
+    }
+
+    class TimestampRange
+    {
+        [JsonProperty("start")]
+        public double Start { get; set; }
+
+        [JsonProperty("end")]
+        public double End { get; set; }
+    }
+
+    class ChartConfig
+    {
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
+        [JsonProperty("data")]
+        public ChartData Data { get; set; }
+    }
+
+    class ChartData
+    {
+        [JsonProperty("labels")]
+        public string[] Labels { get; set; }
+
+        [JsonProperty("datasets")]
+        public ChartDataset[] Datasets { get; set; }
+    }
+
+    class ChartDataset
+    {
+        [JsonProperty("label")]
+        public string Label { get; set; }
+
+        [JsonProperty("data")]
+        public int[] Data { get; set; }
+
+        [JsonProperty("fill")]
+        public bool Fill { get; set; }
+    }
+}

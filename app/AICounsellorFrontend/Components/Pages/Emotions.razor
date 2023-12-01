@@ -1,0 +1,203 @@
+﻿@page "/emotions"
+@rendermode RenderMode.InteractiveServer
+@attribute [StreamRendering(true)]
+@using AI.Counselor.Shared.Models
+@using Newtonsoft.Json
+@inject IJSRuntime JS
+@inject CounselorServiceClient CounselorClient
+
+
+<PageTitle>Emotions</PageTitle>
+
+<Heading1>Track Emotions</Heading1>
+
+ @if (reasonUpdated)
+{
+    <Alert Type=AlertType.Success>
+        Reason updated successfully
+    </Alert>
+}
+
+@if (emotionData == null || emotionData.Emotions == null)
+{
+    <Loading />
+}
+else
+{
+    <DataGrid Model="Emotion" Items=@emotionData.Emotions AllowSelection="true" AllowFiltering="true" HeaderSelected="HandleSelectedHeader" RowSelected="HandleSelectedRow" TableStyle=" TableStyle.StripedRows | TableStyle.FullWidth | TableStyle.UppercaseHeadings">
+        <Column Title="Emotion" Field="(Emotion x) => x.EmotionType" />
+        <Column Field="(Emotion x) => x.TimestampRange.Start" Formatter="DateTimeFormat" />
+        <Column Field="(Emotion x) => x.TimestampRange.End" Formatter="DateTimeFormat" />
+        <Column Field="(Emotion x) => x.EmotionType">
+            <Template>
+                @if (IsGreaterThan10Seconds(context.TimestampRange))
+                {
+                    <PrimaryButton Style="ButtonStyle.Green" @onclick="() => ShowReasonModal(context)">Provide Reason</PrimaryButton>
+                }
+            </Template>
+        </Column>
+    </DataGrid>
+    @* <Chart @ref="barChart" Type="ChartType.Bar" TItem="double" /> *@
+   
+    @if (selectedEmotion != null)
+    {
+        <div class="modal" data-backdrop="static" tabindex="-1" role="dialog" style="display: @(showModal ? "block" : "none")">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Submit</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseModal">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form @onsubmit="SubmitReason" @onsubmit:preventDefault>
+                            <div class="shadow sm:overflow-hidden sm:rounded-md max-w-screen-lg">
+                                <div class="space-y-6 bg-white py-6 px-4 sm:p-6">
+                                    <div>
+                                        <h3 class="text-lg font-medium leading-6 text-gray-900">Reason for @(selectedEmotion != null ? selectedEmotion.EmotionType : "")</h3>
+                                        <p class="notes mt-1 text-sm text-gray-500">
+                                        </p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="emotionReason">Reason:</label>
+                                        <textarea class="form-control" id="emotionReason" rows="3" @bind="reason"></textarea>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 px-4 py-3 text-right sm:px-12">
+                                    <PrimaryButton type="submit" onclick="SubmitReason">Save</PrimaryButton>
+                                    <PrimaryButton onclick="CloseModal">Cancel</PrimaryButton>
+
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    public bool showModal = false;
+    public Emotion selectedEmotion;
+    public string reason = string.Empty;
+    public bool reasonUpdated = false;
+    public EmotionResponse emotionData;
+    // public Chart<double> barChart;
+    public string[] Labels = { "happy", "fear", "neutral", "sad", "angry", "surprise" };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            emotionData = await CounselorClient.GetEmotionsAsync();            
+            // if (barChart == null)
+            // {
+            //     barChart = new Chart<double>();
+            // }
+            // await barChart.Clear();
+            // await barChart.AddLabelsDatasetsAndUpdate(Labels, GetDatasetChartData());
+            StateHasChanged();
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+    public string DateTimeFormat(object o)
+    {
+        return UnixTimeStampToDateTime((double)o).ToString("dddd, dd MMMM yyyy HH:mm:ss");
+    }
+
+    public DateTime UnixTimeStampToDateTime(double unixTimestamp)
+    {
+        // The Unix epoch starts from January 1, 1970
+        DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // Convert the Unix timestamp to seconds and add it to the epoch
+        return epoch.AddSeconds(unixTimestamp);
+    }
+
+    public bool IsGreaterThan10Seconds(TimestampRange timestampRange)
+    {
+        var duration = TimeSpan.FromSeconds(timestampRange.End - timestampRange.Start);
+        return duration.TotalSeconds > 10;
+    }
+
+    public bool IsGreaterThan5Minutes(TimestampRange timestampRange)
+    {
+        var duration = TimeSpan.FromSeconds(timestampRange.End - timestampRange.Start);
+        return duration.TotalMinutes > 5;
+    }
+
+    public void ShowReasonModal(Emotion emotion)
+    {
+        selectedEmotion = emotion;
+        showModal = true;
+    }
+
+    public void CloseModal()
+    {
+        showModal = false;
+    }
+    public async Task HandleSelectedHeader(Column<Emotion> item)
+    {
+        await JS.Log(item.Name);
+    }
+
+    public async Task HandleSelectedRow(Emotion x)
+    {
+        await JS.Log(x);
+    }
+
+    public async Task SubmitReason()
+    {
+        var emotions = emotionData.Emotions
+        .Where(e => e.Id == selectedEmotion.Id &&
+                    e.TimestampRange.Start != selectedEmotion.TimestampRange.Start &&
+                    e.TimestampRange.End != selectedEmotion.TimestampRange.End)
+        .ToList();
+        Console.WriteLine($"Reason for {selectedEmotion.EmotionType}: {reason}");
+        selectedEmotion.Reason = reason;
+        emotions.Add(selectedEmotion);
+        await CounselorClient.UpdateEmotionReasonAsync(selectedEmotion.Id, emotions);
+        showModal = false;
+        reasonUpdated = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        reasonUpdated = false;
+    }
+    // public ChartDataset<double>[] GetDatasetChartData()
+    // {
+    //     var labels = emotionData.Emotions.Select(e => e.EmotionType).Distinct().ToList();
+    //     var datasets = new List<ChartDataset<double>>();
+
+    //     foreach (var emotionType in labels)
+    //     {
+    //         var data = emotionData.Emotions
+    //             .Where(e => e.EmotionType == emotionType)
+    //             .Select(e => e.TimestampRange.Start)
+    //             .ToList();
+
+    //         var dataset = new ChartDataset<double>
+    //             {
+    //                 Label = emotionType,
+    //                 Data = data,
+    //                 BackgroundColor = $"rgba({RandomColor()}, {RandomColor()}, {RandomColor()}, 0.2)",
+    //                 BorderColor = $"rgba({RandomColor()}, {RandomColor()}, {RandomColor()}, 1)",
+    //                 BorderWidth = 1
+    //             };
+
+    //         datasets.Add(dataset);
+    //     }
+    //     return datasets.ToArray();
+    // }
+
+    // // Function to generate a random color value
+    // private int RandomColor()
+    // {
+    //     var random = new Random();
+    //     return random.Next(0, 255);
+    // }
+}
